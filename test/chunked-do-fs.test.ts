@@ -1,5 +1,5 @@
 import { env, exports } from 'cloudflare:workers';
-import { runInDurableObject } from 'cloudflare:test';
+import { abortAllDurableObjects, runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 
 import { ChunkedDurableObjectFS } from '../src/chunked-do-fs';
@@ -23,6 +23,20 @@ describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 		const response = await exports.default.fetch('https://example.com/query');
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ rows: [{ ok: 1 }] });
+	});
+
+	it('persists PGlite data across Durable Object restarts', async () => {
+		const objectName = crypto.randomUUID();
+		const stub = env.TRUNK.getByName(objectName);
+
+		await stub.query('create table items (name text primary key)');
+		await stub.query("insert into items values ('persisted')");
+
+		await abortAllDurableObjects();
+
+		const restartedStub = env.TRUNK.getByName(objectName);
+		const result = (await restartedStub.query('select name from items')) as { rows: { name: string }[] };
+		expect(result.rows).toEqual([{ name: 'persisted' }]);
 	});
 
 	it('persists files as chunks and reloads them from the same object storage', async () => {

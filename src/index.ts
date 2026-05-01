@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { PGlite } from '@electric-sql/pglite';
+import { PGlite, type Results } from '@electric-sql/pglite';
 import { Hono } from 'hono';
 
 import { ChunkedDurableObjectFS } from './chunked-do-fs';
@@ -15,9 +15,9 @@ export class Trunk extends DurableObject<Env> {
 		super(ctx, env);
 	}
 
-	public async query(sql = 'select 1 as ok') {
+	public async query<T = Record<string, unknown>>(sql = 'select 1 as ok'): Promise<Results<T>> {
 		const db = await this.getDb();
-		return db.query(sql);
+		return db.query<T>(sql);
 	}
 
 	private getDb(): Promise<PGlite> {

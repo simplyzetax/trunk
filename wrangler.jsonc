@@ -30,11 +30,13 @@
 	"rules": [
 		{
 			"type": "CompiledWasm",
-			"globs": ["**/*.wasm"]
+			"globs": ["**/*.wasm"],
+			"fallthrough": true
 		},
 		{
 			"type": "Data",
-			"globs": ["**/*.data", "**/*.tgz"]
+			"globs": ["**/*.data", "**/*.tgz"],
+			"fallthrough": true
 		}
 	]
 	/**

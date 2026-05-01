@@ -1,5 +1,4 @@
-import i32I32ToI32 from './wasm-function/i32-i32-to-i32.wasm';
-import i32ToI32 from './wasm-function/i32-to-i32.wasm';
+import { wasmFunctionWrapperModules } from './wasm-function-wrappers';
 
 type WasmValueType = 'i32' | 'i64' | 'f32' | 'f64' | 'externref';
 
@@ -7,11 +6,6 @@ type WasmFunctionType = {
 	parameters: WasmValueType[];
 	results: WasmValueType[];
 };
-
-const wrapperModules = new Map<string, WebAssembly.Module>([
-	['i32->i32', i32ToI32],
-	['i32,i32->i32', i32I32ToI32],
-]);
 
 const keyForType = (type: WasmFunctionType) => `${type.parameters.join(',')}->${type.results.join(',')}`;
 
@@ -26,7 +20,7 @@ export const installWasmFunctionPolyfill = () => {
 
 	wasm.Function = (function WasmFunction(type: WasmFunctionType, func: (...args: number[]) => number) {
 		const key = keyForType(type);
-		const wrapperModule = wrapperModules.get(key);
+		const wrapperModule = wasmFunctionWrapperModules.get(key);
 
 		if (!wrapperModule) {
 			throw new Error(`Unsupported WebAssembly.Function signature: ${key}`);

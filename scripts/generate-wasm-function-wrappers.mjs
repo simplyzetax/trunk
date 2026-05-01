@@ -1,6 +1,57 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 
+const signatures = [
+	'd',
+	'i',
+	'ii',
+	'iid',
+	'iii',
+	'iiii',
+	'iiiiiii',
+	'iiijj',
+	'iiip',
+	'iij',
+	'iijip',
+	'iijji',
+	'iijp',
+	'iip',
+	'iipi',
+	'iipii',
+	'iipiii',
+	'iipip',
+	'iipp',
+	'iippi',
+	'iippiii',
+	'iippipp',
+	'iippjp',
+	'iippp',
+	'iipppp',
+	'ip',
+	'ipi',
+	'ipiiijpp',
+	'ipip',
+	'ipipipii',
+	'ipj',
+	'ipp',
+	'ippiiij',
+	'ippp',
+	'ipppp',
+	'jp',
+	'p',
+	'pp',
+	'pppp',
+	'v',
+	'vi',
+	'vjp',
+	'vp',
+	'vpi',
+	'vppip',
+	'vppp',
+	'vpppp',
+];
+
 const typeCodes = { i: 0x7f, p: 0x7f, j: 0x7e, f: 0x7d, d: 0x7c, e: 0x6f };
+const typeNames = { i: 'i32', p: 'i32', j: 'i64', f: 'f32', d: 'f64', e: 'externref' };
 
 const uleb128Encode = (value, target) => {
 	if (value < 128) {
@@ -41,6 +92,33 @@ const wrapperBytes = (sig) => {
 	return Uint8Array.from(bytes);
 };
 
+const keyForSignature = (sig) => {
+	const result = sig[0] === 'v' ? [] : [typeNames[sig[0]]];
+	const parameters = [...sig.slice(1)].map((type) => typeNames[type]);
+	return `${parameters.join(',')}->${result.join(',')}`;
+};
+
+const uniqueWrappers = new Map();
+for (const sig of signatures) {
+	const key = keyForSignature(sig);
+	if (!uniqueWrappers.has(key)) {
+		uniqueWrappers.set(key, sig);
+	}
+}
+
 mkdirSync('src/wasm-function', { recursive: true });
-writeFileSync('src/wasm-function/i32-to-i32.wasm', wrapperBytes('ii'));
-writeFileSync('src/wasm-function/i32-i32-to-i32.wasm', wrapperBytes('iii'));
+
+const imports = [];
+const entries = [];
+for (const [key, sig] of uniqueWrappers) {
+	const name = `wrapper_${sig}`;
+	const file = `sig-${sig}.wasm`;
+	writeFileSync(`src/wasm-function/${file}`, wrapperBytes(sig));
+	imports.push(`import ${name} from './wasm-function/${file}';`);
+	entries.push(`\t['${key}', ${name}],`);
+}
+
+writeFileSync(
+	'src/wasm-function-wrappers.ts',
+	`${imports.join('\n')}\n\nexport const wasmFunctionWrapperModules = new Map<string, WebAssembly.Module>([\n${entries.join('\n')}\n]);\n`,
+);
