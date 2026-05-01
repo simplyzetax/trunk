@@ -23,15 +23,20 @@ export class Trunk extends DurableObject<Env> {
 	private getDb(): Promise<PGlite> {
 		if (!this.db) {
 			forcePgliteWorkerRuntime();
-			const hasPersistedFs =
-				this.ctx.storage.kv.get(`${PGLITE_FS_PREFIX}state:meta`) !== undefined || this.ctx.storage.kv.get(`${PGLITE_FS_PREFIX}state`) !== undefined;
 			const fs = new ChunkedDurableObjectFS(this.ctx.storage, { prefix: PGLITE_FS_PREFIX });
+			let hasPersistedDb = false;
+			try {
+				fs.lstat('/PG_VERSION');
+				hasPersistedDb = true;
+			} catch {
+				hasPersistedDb = false;
+			}
 
 			this.db = PGlite.create({
 				...pgliteArtifacts,
 				fs,
 				initialMemory: 128 * 1024 * 1024,
-				...(hasPersistedFs ? {} : { loadDataDir: pglitePrepopulatedDataDir }),
+				...(hasPersistedDb ? {} : { loadDataDir: pglitePrepopulatedDataDir }),
 			}).catch((error) => {
 				this.db = undefined;
 				throw error;
