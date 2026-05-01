@@ -10,7 +10,7 @@
 	"migrations": [
 		{
 			"new_sqlite_classes": [
-				"MyDurableObject"
+				"Trunk"
 			],
 			"tag": "v1"
 		}
@@ -18,8 +18,8 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "MyDurableObject",
-				"name": "MY_DURABLE_OBJECT"
+				"class_name": "Trunk",
+				"name": "TRUNK"
 			}
 		]
 	},
@@ -27,8 +27,15 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
-	"compatibility_flags": [
-		"nodejs_compat"
+	"rules": [
+		{
+			"type": "CompiledWasm",
+			"globs": ["**/*.wasm"]
+		},
+		{
+			"type": "Data",
+			"globs": ["**/*.data"]
+		}
 	]
 	/**
 	 * Smart Placement

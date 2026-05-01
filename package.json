@@ -6,11 +6,18 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
+		"test": "vitest run",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.15.2",
 		"@types/node": "^25.6.0",
 		"typescript": "^5.5.2",
+		"vitest": "^4.1.0",
 		"wrangler": "^4.87.0"
+	},
+	"dependencies": {
+		"@electric-sql/pglite": "^0.4.5",
+		"hono": "^4.12.16"
 	}
 }
