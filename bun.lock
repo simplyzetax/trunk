@@ -6,6 +6,7 @@
       "name": "trunk",
       "dependencies": {
         "@electric-sql/pglite": "^0.4.5",
+        "@electric-sql/pglite-prepopulatedfs": "0.0.3",
         "hono": "^4.12.16",
       },
       "devDependencies": {
@@ -37,6 +38,8 @@
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.4.5", "", {}, "sha512-aGG2zGEyZzGWKy8P+9ZoNUV0jxt1+hgbeTf+bVAYyxVZZLXg3/9aFlfLxb08AYZVAfAkQlQIysmWjhc5hwDG8g=="],
+
+    "@electric-sql/pglite-prepopulatedfs": ["@electric-sql/pglite-prepopulatedfs@0.0.3", "", {}, "sha512-3MNFt+gR0P22foWi55j/HZ6DvQ82DEVIvmoKVYCdoG/gezMikGR794tO07/15CV4RcR3PnfCPoQjApPfXfD01w=="],
 
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 

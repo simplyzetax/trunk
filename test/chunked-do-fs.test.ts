@@ -46,6 +46,17 @@ describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 		});
 	});
 
+	it('reads into non-Uint8Array views backed by the original buffer', async () => {
+		await runWithFs(crypto.randomUUID(), (fs) => {
+			fs.writeFile('/file', new Uint8Array([1, 2, 3]));
+			const fd = fs.open('/file');
+			const heap = new Int8Array(8);
+
+			expect(fs.read(fd, heap as unknown as Uint8Array, 2, 3, 0)).toBe(3);
+			expect([...new Uint8Array(heap.buffer).slice(2, 5)]).toEqual([1, 2, 3]);
+		});
+	});
+
 	it('truncates persisted files and removes discarded chunks', async () => {
 		const objectName = crypto.randomUUID();
 

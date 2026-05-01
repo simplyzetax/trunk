@@ -674,20 +674,20 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 		this.#dirtyState = true;
 	}
 
-	#sourceView(buffer: Uint8Array, offset: number, length: number): Uint8Array {
-		if (buffer instanceof Uint8Array) {
-			return buffer.subarray(offset, offset + length);
+	#sourceView(buffer: ArrayBuffer | ArrayBufferView, offset: number, length: number): Uint8Array {
+		if (buffer instanceof ArrayBuffer) {
+			return new Uint8Array(buffer, offset, length);
 		}
 
-		return new Uint8Array(buffer, offset, length);
+		return new Uint8Array(buffer.buffer, buffer.byteOffset + offset, length);
 	}
 
-	#targetView(buffer: Uint8Array, offset: number, length: number): Uint8Array {
-		if (buffer instanceof Uint8Array) {
-			return buffer.subarray(offset, offset + length);
+	#targetView(buffer: ArrayBuffer | ArrayBufferView, offset: number, length: number): Uint8Array {
+		if (buffer instanceof ArrayBuffer) {
+			return new Uint8Array(buffer, offset, length);
 		}
 
-		return new Uint8Array(buffer, offset, length);
+		return new Uint8Array(buffer.buffer, buffer.byteOffset + offset, length);
 	}
 
 	#isCreateFlag(flags?: string): boolean {

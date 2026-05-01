@@ -7,3 +7,8 @@ declare module '*.data' {
 	const data: ArrayBuffer;
 	export default data;
 }
+
+declare module '*.tgz' {
+	const data: ArrayBuffer;
+	export default data;
+}

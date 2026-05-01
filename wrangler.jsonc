@@ -34,7 +34,7 @@
 		},
 		{
 			"type": "Data",
-			"globs": ["**/*.data"]
+			"globs": ["**/*.data", "**/*.tgz"]
 		}
 	]
 	/**

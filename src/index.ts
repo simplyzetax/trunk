@@ -3,9 +3,10 @@ import { PGlite } from '@electric-sql/pglite';
 import { Hono } from 'hono';
 
 import { ChunkedDurableObjectFS } from './chunked-do-fs';
-import { forcePgliteWorkerRuntime, pgliteArtifacts } from './pglite-artifacts';
+import { forcePgliteWorkerRuntime, pgliteArtifacts, pglitePrepopulatedDataDir } from './pglite-artifacts';
 
 const app = new Hono<{ Bindings: Env }>();
+const PGLITE_FS_PREFIX = 'pglite-fs:';
 
 export class Trunk extends DurableObject<Env> {
 	private db?: Promise<PGlite>;
@@ -20,12 +21,22 @@ export class Trunk extends DurableObject<Env> {
 	}
 
 	private getDb(): Promise<PGlite> {
-		forcePgliteWorkerRuntime();
-		this.db ??= PGlite.create({
-			...pgliteArtifacts,
-			fs: new ChunkedDurableObjectFS(this.ctx.storage),
-			initialMemory: 128 * 1024 * 1024,
-		});
+		if (!this.db) {
+			forcePgliteWorkerRuntime();
+			const hasPersistedFs =
+				this.ctx.storage.kv.get(`${PGLITE_FS_PREFIX}state:meta`) !== undefined || this.ctx.storage.kv.get(`${PGLITE_FS_PREFIX}state`) !== undefined;
+			const fs = new ChunkedDurableObjectFS(this.ctx.storage, { prefix: PGLITE_FS_PREFIX });
+
+			this.db = PGlite.create({
+				...pgliteArtifacts,
+				fs,
+				initialMemory: 128 * 1024 * 1024,
+				...(hasPersistedFs ? {} : { loadDataDir: pglitePrepopulatedDataDir }),
+			}).catch((error) => {
+				this.db = undefined;
+				throw error;
+			});
+		}
 
 		return this.db;
 	}

@@ -18,6 +18,7 @@
 	},
 	"dependencies": {
 		"@electric-sql/pglite": "^0.4.5",
+		"@electric-sql/pglite-prepopulatedfs": "0.0.3",
 		"hono": "^4.12.16"
 	}
 }
