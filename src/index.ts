@@ -35,7 +35,7 @@ export class Trunk extends DurableObject<Env> {
 			this.db = PGlite.create({
 				...pgliteArtifacts,
 				fs,
-				initialMemory: 128 * 1024 * 1024,
+				initialMemory: 64 * 1024 * 1024,
 				...(hasPersistedDb ? {} : { loadDataDir: pglitePrepopulatedDataDir }),
 			}).catch((error) => {
 				this.db = undefined;

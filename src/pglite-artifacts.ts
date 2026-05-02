@@ -1,6 +1,6 @@
 import prepopulatedFs from '../node_modules/@electric-sql/pglite-prepopulatedfs/dist/prepopulatedfs.tgz';
 import pgliteData from '../node_modules/@electric-sql/pglite/dist/pglite.data';
-import pgliteWasmModule from '../node_modules/@electric-sql/pglite/dist/pglite.wasm';
+import pgliteWasmModule from './vendor/pglite/pglite.wasm';
 
 import { installWasmFunctionPolyfill } from './wasm-function-polyfill';
 

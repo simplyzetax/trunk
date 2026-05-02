@@ -1,0 +1,13 @@
+diff --git a/build-pglite.sh b/build-pglite.sh
+index 0db8468..7f0fa56 100755
+--- a/build-pglite.sh
++++ b/build-pglite.sh
+@@ -166,7 +166,7 @@ PGLITE_EXPORTED_RUNTIME_METHODS="MEMFS,IDBFS,FS,PROXYFS,setValue,getValue,UTF8T
+ # -sDYLINK_DEBUG=2 use this for debugging missing exported symbols (ex when an extension calls a pgcore function that hasn't been exported)
+ POSTGRES_PGLITE_FLAGS="\
+ -sSTACK_SIZE=8MB \
+--sINITIAL_MEMORY=128MB \
++-sINITIAL_MEMORY=64MB \
+ -sIMPORTED_MEMORY=1 \
+ -sEXPORTED_RUNTIME_METHODS=$PGLITE_EXPORTED_RUNTIME_METHODS \
+ -sEXPORTED_FUNCTIONS=@/install/pglite/exported_functions.txt \

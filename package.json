@@ -7,7 +7,9 @@
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"test": "vitest run",
-		"cf-typegen": "wrangler types"
+		"cf-typegen": "wrangler types",
+		"pglite:build-low-memory": "bash scripts/build-pglite-low-memory.sh",
+		"pglite:verify-memory": "node scripts/verify-pglite-memory.mjs src/vendor/pglite/pglite.wasm 64"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.15.2",

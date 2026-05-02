@@ -1,0 +1,3 @@
+[submodule "vendor/pglite"]
+	path = vendor/pglite
+	url = https://github.com/electric-sql/pglite.git
