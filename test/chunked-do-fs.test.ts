@@ -20,9 +20,16 @@ const runWithFs = async (name: string, callback: (fs: ChunkedDurableObjectFS, st
 
 describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 	it('runs PGlite queries through the Durable Object route', async () => {
-		const response = await exports.default.fetch('https://example.com/query');
+		const response = await exports.default.fetch('https://example.com/query/foo');
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ rows: [{ ok: 1 }] });
+	});
+
+	it('starts PGlite with constrained shared buffers', async () => {
+		const stub = env.TRUNK.getByName(crypto.randomUUID());
+		const result = (await stub.query("select setting::int as buffers from pg_settings where name = 'shared_buffers'")) as { rows: { buffers: number }[] };
+
+		expect(result.rows).toEqual([{ buffers: 512 }]);
 	});
 
 	it('persists PGlite data across Durable Object restarts', async () => {
@@ -57,6 +64,14 @@ describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 			expect(fs.read(fd, buffer, 0, buffer.length, 0)).toBe(7);
 			expect([...buffer]).toEqual([1, 2, 3, 4, 5, 6, 7]);
 			expect(fs.lstat('/base/file').size).toBe(7);
+		});
+	});
+
+	it('writes file chunks through before metadata sync to limit heap growth', async () => {
+		await runWithFs(crypto.randomUUID(), (fs, state) => {
+			fs.writeFile('/file', new Uint8Array([1, 2, 3, 4, 5, 6, 7]));
+
+			expect(chunkKeys(state)).toHaveLength(2);
 		});
 	});
 

@@ -7,6 +7,7 @@ import { forcePgliteWorkerRuntime, pgliteArtifacts, pglitePrepopulatedDataDir } 
 
 const app = new Hono<{ Bindings: Env }>();
 const PGLITE_FS_PREFIX = 'pglite-fs:';
+const PGLITE_START_PARAMS = [...PGlite.defaultStartParams, '-c', 'shared_buffers=4MB'];
 
 export class Trunk extends DurableObject<Env> {
 	private db?: Promise<PGlite>;
@@ -36,6 +37,7 @@ export class Trunk extends DurableObject<Env> {
 				...pgliteArtifacts,
 				fs,
 				initialMemory: 64 * 1024 * 1024,
+				startParams: PGLITE_START_PARAMS,
 				...(hasPersistedDb ? {} : { loadDataDir: pglitePrepopulatedDataDir }),
 			}).catch((error) => {
 				this.db = undefined;
@@ -47,8 +49,8 @@ export class Trunk extends DurableObject<Env> {
 	}
 }
 
-app.get('/query', async (c) => {
-	const stub = c.env.TRUNK.getByName('foo');
+app.get('/query/:id', async (c) => {
+	const stub = c.env.TRUNK.getByName(c.req.param('id'));
 	return c.json(await stub.query());
 });
 

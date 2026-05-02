@@ -208,15 +208,17 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 			const absolutePosition = position + bytesRead;
 			const chunkIndex = Math.floor(absolutePosition / this.chunkSize);
 			const chunkOffset = absolutePosition % this.chunkSize;
-			const chunk = this.#getChunk(file.id, chunkIndex);
+			const chunk = this.#readChunk(file.id, chunkIndex);
 			const readLength = Math.min(bytesToRead - bytesRead, this.chunkSize - chunkOffset);
 
-			target.set(chunk.subarray(chunkOffset, chunkOffset + readLength), bytesRead);
+			target.fill(0, bytesRead, bytesRead + readLength);
+			if (chunk) {
+				target.set(chunk.subarray(chunkOffset, chunkOffset + readLength), bytesRead);
+			}
 			bytesRead += readLength;
 		}
 
 		file.atime = Date.now();
-		this.#dirtyState = true;
 		return bytesRead;
 	}
 
@@ -463,7 +465,8 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 			const chunk = this.#getChunk(file.id, chunkIndex);
 
 			chunk.set(source.subarray(bytesWritten, bytesWritten + writeLength), chunkOffset);
-			this.#markDirtyChunk(file.id, chunkIndex);
+			this.#persistChunk(file.id, chunkIndex, chunk);
+			this.#chunks.delete(this.#chunkKey(file.id, chunkIndex));
 			bytesWritten += writeLength;
 		}
 
@@ -488,7 +491,8 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 			const chunk = this.#getChunk(file.id, nextLastChunk);
 			const keepBytes = len % this.chunkSize || this.chunkSize;
 			chunk.fill(0, keepBytes);
-			this.#markDirtyChunk(file.id, nextLastChunk);
+			this.#persistChunk(file.id, nextLastChunk, chunk);
+			this.#chunks.delete(this.#chunkKey(file.id, nextLastChunk));
 		}
 
 		file.size = len;
@@ -526,7 +530,23 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 			this.#chunks.delete(key);
 		}
 		this.#dirtyChunks.delete(key);
+		this.#storage.kv.delete(key);
 		this.#deletedChunks.add(key);
+	}
+
+	#readChunk(fileId: string, chunkIndex: number): Uint8Array | undefined {
+		const key = this.#chunkKey(fileId, chunkIndex);
+		const cached = this.#chunks.get(key);
+		if (cached) {
+			return cached;
+		}
+
+		const stored = this.#storage.kv.get<Uint8Array | ArrayBuffer>(key);
+		if (!stored) {
+			return undefined;
+		}
+
+		return stored instanceof Uint8Array ? stored : new Uint8Array(stored);
 	}
 
 	#getChunk(fileId: string, chunkIndex: number): Uint8Array {
@@ -545,6 +565,13 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 
 		this.#chunks.set(key, chunk);
 		return chunk;
+	}
+
+	#persistChunk(fileId: string, chunkIndex: number, chunk: Uint8Array): void {
+		const key = this.#chunkKey(fileId, chunkIndex);
+		this.#storage.kv.put(key, chunk.slice());
+		this.#dirtyChunks.delete(key);
+		this.#deletedChunks.delete(key);
 	}
 
 	#markDirtyChunk(fileId: string, chunkIndex: number): void {
