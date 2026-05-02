@@ -109,6 +109,37 @@ describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 		});
 	});
 
+	it('hides deleted chunks before metadata sync', async () => {
+		await runWithFs(crypto.randomUUID(), async (fs) => {
+			fs.writeFile('/file', new Uint8Array([1, 2, 3, 4, 5, 6, 7]));
+			await fs.syncToFs();
+
+			fs.truncate('/file', 2);
+			fs.truncate('/file', 7);
+
+			const fd = fs.open('/file');
+			const buffer = new Uint8Array(7);
+
+			expect(fs.read(fd, buffer, 0, buffer.length, 0)).toBe(7);
+			expect([...buffer]).toEqual([1, 2, 0, 0, 0, 0, 0]);
+		});
+	});
+
+	it('does not persist writes to an unlinked open file', async () => {
+		await runWithFs(crypto.randomUUID(), async (fs, state) => {
+			fs.writeFile('/file', new Uint8Array([1, 2, 3, 4, 5]));
+			await fs.syncToFs();
+
+			const fd = fs.open('/file');
+			fs.unlink('/file');
+			fs.write(fd, new Uint8Array([9, 9, 9]), 0, 3, 0);
+			fs.close(fd);
+			await fs.syncToFs();
+
+			expect(chunkKeys(state)).toHaveLength(0);
+		});
+	});
+
 	it('persists rename and unlink metadata changes', async () => {
 		const objectName = crypto.randomUUID();
 

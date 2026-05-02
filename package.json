@@ -7,6 +7,7 @@
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"test": "vitest run",
+		"check": "pnpm pglite:verify-memory && pnpm exec tsc --noEmit && pnpm test && pnpm exec wrangler deploy --dry-run",
 		"cf-typegen": "wrangler types",
 		"pglite:build-low-memory": "bash scripts/build-pglite-low-memory.sh",
 		"pglite:verify-memory": "node scripts/verify-pglite-memory.mjs src/vendor/pglite/pglite.wasm 64"

@@ -7,3 +7,5 @@ pnpm pglite:build-low-memory
 ```
 
 The app intentionally still imports `pglite.data` from `@electric-sql/pglite` because the installed PGlite JavaScript glue validates that data bundle's exact byte size.
+
+The Worker also starts Postgres with `shared_buffers=4MB`; the upstream default is 128MiB and exceeds Cloudflare's isolate budget once WASM and JavaScript heap overhead are included.

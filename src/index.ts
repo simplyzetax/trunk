@@ -7,6 +7,7 @@ import { forcePgliteWorkerRuntime, pgliteArtifacts, pglitePrepopulatedDataDir } 
 
 const app = new Hono<{ Bindings: Env }>();
 const PGLITE_FS_PREFIX = 'pglite-fs:';
+// Keep Postgres shared buffers well below the Workers 128MB isolate limit.
 const PGLITE_START_PARAMS = [...PGlite.defaultStartParams, '-c', 'shared_buffers=4MB'];
 
 export class Trunk extends DurableObject<Env> {

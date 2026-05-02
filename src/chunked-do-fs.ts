@@ -56,7 +56,6 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 	#openFiles = new Map<number, string>();
 	#nextFd = 1;
 	#chunks = new Map<string, Uint8Array>();
-	#dirtyChunks = new Set<string>();
 	#deletedChunks = new Set<string>();
 	#openFileRefs = new Map<string, number>();
 	#unlinkedOpenFiles = new Set<string>();
@@ -73,7 +72,7 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 	}
 
 	async syncToFs(): Promise<void> {
-		if (!this.#dirtyState && this.#dirtyChunks.size === 0 && this.#deletedChunks.size === 0) {
+		if (!this.#dirtyState && this.#deletedChunks.size === 0) {
 			return;
 		}
 
@@ -82,20 +81,12 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 				this.#storage.kv.delete(key);
 			}
 
-			for (const key of this.#dirtyChunks) {
-				const chunk = this.#chunks.get(key);
-				if (chunk) {
-					this.#storage.kv.put(key, chunk.slice());
-				}
-			}
-
 			if (this.#dirtyState) {
 				this.#writeState();
 			}
 		});
 
 		this.#dirtyState = false;
-		this.#dirtyChunks.clear();
 		this.#deletedChunks.clear();
 	}
 
@@ -465,8 +456,7 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 			const chunk = this.#getChunk(file.id, chunkIndex);
 
 			chunk.set(source.subarray(bytesWritten, bytesWritten + writeLength), chunkOffset);
-			this.#persistChunk(file.id, chunkIndex, chunk);
-			this.#chunks.delete(this.#chunkKey(file.id, chunkIndex));
+			this.#writeChunk(file.id, chunkIndex, chunk);
 			bytesWritten += writeLength;
 		}
 
@@ -491,8 +481,7 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 			const chunk = this.#getChunk(file.id, nextLastChunk);
 			const keepBytes = len % this.chunkSize || this.chunkSize;
 			chunk.fill(0, keepBytes);
-			this.#persistChunk(file.id, nextLastChunk, chunk);
-			this.#chunks.delete(this.#chunkKey(file.id, nextLastChunk));
+			this.#writeChunk(file.id, nextLastChunk, chunk);
 		}
 
 		file.size = len;
@@ -529,8 +518,6 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 		if (!keepCache) {
 			this.#chunks.delete(key);
 		}
-		this.#dirtyChunks.delete(key);
-		this.#storage.kv.delete(key);
 		this.#deletedChunks.add(key);
 	}
 
@@ -539,6 +526,9 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 		const cached = this.#chunks.get(key);
 		if (cached) {
 			return cached;
+		}
+		if (this.#deletedChunks.has(key)) {
+			return undefined;
 		}
 
 		const stored = this.#storage.kv.get<Uint8Array | ArrayBuffer>(key);
@@ -558,7 +548,7 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 
 		const stored = this.#storage.kv.get<Uint8Array | ArrayBuffer>(key);
 		const chunk = new Uint8Array(this.chunkSize);
-		if (stored) {
+		if (stored && !this.#deletedChunks.has(key)) {
 			const source = stored instanceof Uint8Array ? stored : new Uint8Array(stored);
 			chunk.set(source.subarray(0, this.chunkSize));
 		}
@@ -567,17 +557,22 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 		return chunk;
 	}
 
+	#writeChunk(fileId: string, chunkIndex: number, chunk: Uint8Array): void {
+		const key = this.#chunkKey(fileId, chunkIndex);
+		if (this.#unlinkedOpenFiles.has(fileId)) {
+			this.#chunks.set(key, chunk);
+			this.#deletedChunks.add(key);
+			return;
+		}
+
+		this.#persistChunk(fileId, chunkIndex, chunk);
+		this.#chunks.delete(key);
+	}
+
 	#persistChunk(fileId: string, chunkIndex: number, chunk: Uint8Array): void {
 		const key = this.#chunkKey(fileId, chunkIndex);
 		this.#storage.kv.put(key, chunk.slice());
-		this.#dirtyChunks.delete(key);
 		this.#deletedChunks.delete(key);
-	}
-
-	#markDirtyChunk(fileId: string, chunkIndex: number): void {
-		const key = this.#chunkKey(fileId, chunkIndex);
-		this.#deletedChunks.delete(key);
-		this.#dirtyChunks.add(key);
 	}
 
 	#fileFromFd(fd: number): FileNode {
@@ -603,6 +598,11 @@ export class ChunkedDurableObjectFS extends BaseFilesystem {
 
 		this.#openFileRefs.delete(fileId);
 		if (this.#unlinkedOpenFiles.delete(fileId)) {
+			const file = this.#files.get(fileId);
+			const lastChunk = !file || file.size === 0 ? -1 : Math.floor((file.size - 1) / this.chunkSize);
+			for (let chunkIndex = 0; chunkIndex <= lastChunk; chunkIndex++) {
+				this.#chunks.delete(this.#chunkKey(fileId, chunkIndex));
+			}
 			this.#files.delete(fileId);
 		}
 	}
