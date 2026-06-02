@@ -4,22 +4,20 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "trunk",
+	"name": "pglite-durable-object-template",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-05-01",
 	"migrations": [
 		{
-			"new_sqlite_classes": [
-				"Trunk"
-			],
+			"new_sqlite_classes": ["PgliteDatabase"],
 			"tag": "v1"
 		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "Trunk",
-				"name": "TRUNK"
+				"class_name": "PgliteDatabase",
+				"name": "PGLITE_DATABASE"
 			}
 		]
 	},

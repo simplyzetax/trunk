@@ -3,22 +3,107 @@ import { abortAllDurableObjects, runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 
 import { ChunkedDurableObjectFS } from '../src/chunked-do-fs';
-import { Trunk } from '../src/index';
+import { PgliteDatabase } from '../src/index';
 
 const chunkKeys = (state: DurableObjectState) => [...state.storage.kv.list({ prefix: 'pglite-fs:chunk:' })].map(([key]) => key).sort();
 
 const runWithFs = async (name: string, callback: (fs: ChunkedDurableObjectFS, state: DurableObjectState) => void | Promise<void>) => {
-	const id = env.TRUNK.idFromName(name);
-	const stub = env.TRUNK.get(id);
+	const id = env.PGLITE_DATABASE.idFromName(name);
+	const stub = env.PGLITE_DATABASE.get(id);
 
-	await runInDurableObject(stub, async (instance: Trunk, state) => {
-		expect(instance).toBeInstanceOf(Trunk);
+	await runInDurableObject(stub, async (instance: PgliteDatabase, state) => {
+		expect(instance).toBeInstanceOf(PgliteDatabase);
 		const fs = new ChunkedDurableObjectFS(state.storage, { chunkSize: 4 });
 		await callback(fs, state);
 	});
 };
 
 describe('ChunkedDurableObjectFS in Durable Object storage', () => {
+	it('returns health status', async () => {
+		const response = await exports.default.fetch('https://example.com/health');
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ ok: true });
+	});
+
+	it('runs SQL through the HTTP query endpoint', async () => {
+		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sql: 'select $1::text as value', params: ['hello'] }),
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ rows: [{ value: 'hello' }] });
+	});
+
+	it('rejects malformed JSON query bodies', async () => {
+		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: '{',
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
+	});
+
+	it('rejects null JSON query bodies', async () => {
+		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: 'null',
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: 'Expected JSON object body' });
+	});
+
+	it('rejects query requests without SQL', async () => {
+		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ params: [] }),
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: 'Expected JSON body with string field: sql' });
+	});
+
+	it('rejects query requests with non-array params', async () => {
+		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sql: 'select 1', params: {} }),
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: 'Expected params to be an array when provided' });
+	});
+
+	it('returns a small error body for invalid SQL', async () => {
+		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sql: 'select * from missing_table' }),
+		});
+
+		const body = (await response.json()) as { error?: string; stack?: string };
+		expect(response.status).toBe(400);
+		expect(body.error).toContain('missing_table');
+		expect(body.stack).toBeUndefined();
+	});
+
+	it('returns invalid SQL as a non-throwing HTTP query result', async () => {
+		const stub = env.PGLITE_DATABASE.getByName(crypto.randomUUID());
+		const result = await stub.queryForHttp('select * from missing_table');
+
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error).toContain('missing_table');
+		}
+	});
+
 	it('runs PGlite queries through the Durable Object route', async () => {
 		const response = await exports.default.fetch('https://example.com/query/foo');
 		expect(response.status).toBe(200);
@@ -26,7 +111,7 @@ describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 	});
 
 	it('starts PGlite with constrained shared buffers', async () => {
-		const stub = env.TRUNK.getByName(crypto.randomUUID());
+		const stub = env.PGLITE_DATABASE.getByName(crypto.randomUUID());
 		const result = (await stub.query("select setting::int as buffers from pg_settings where name = 'shared_buffers'")) as { rows: { buffers: number }[] };
 
 		expect(result.rows).toEqual([{ buffers: 512 }]);
@@ -34,14 +119,14 @@ describe('ChunkedDurableObjectFS in Durable Object storage', () => {
 
 	it('persists PGlite data across Durable Object restarts', async () => {
 		const objectName = crypto.randomUUID();
-		const stub = env.TRUNK.getByName(objectName);
+		const stub = env.PGLITE_DATABASE.getByName(objectName);
 
 		await stub.query('create table items (name text primary key)');
 		await stub.query("insert into items values ('persisted')");
 
 		await abortAllDurableObjects();
 
-		const restartedStub = env.TRUNK.getByName(objectName);
+		const restartedStub = env.PGLITE_DATABASE.getByName(objectName);
 		const result = (await restartedStub.query('select name from items')) as { rows: { name: string }[] };
 		expect(result.rows).toEqual([{ name: 'persisted' }]);
 	});
