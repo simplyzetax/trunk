@@ -166,3 +166,7 @@ dist
 !.env.example
 .wrangler/
 .wrangler-debug-bundle/
+
+# Generated WASM artifacts. Run `bun run setup` to rebuild them locally.
+src/vendor/pglite/*.wasm
+src/wasm-function/*.wasm

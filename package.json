@@ -1,16 +1,22 @@
 {
-	"name": "trunk",
+	"name": "pglite-durable-object-template",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vitest run",
-		"check": "pnpm pglite:verify-memory && pnpm exec tsc --noEmit && pnpm test && pnpm exec wrangler deploy --dry-run",
+		"test": "bun run test:workers && bun run test:node",
+		"test:workers": "vitest run --config vitest.config.mts",
+		"test:node": "vitest run --config vitest.node.config.mts",
+		"typecheck": "tsc --noEmit",
+		"check": "bun run artifacts:check && bun run typecheck && bun run test:workers && bun run test:node && wrangler deploy --dry-run",
+		"artifacts:check": "bun scripts/check-artifacts.mjs",
 		"cf-typegen": "wrangler types",
+		"wasm:functions": "bun scripts/generate-wasm-function-wrappers.mjs",
+		"setup": "git submodule update --init --recursive vendor/pglite && bun run wasm:functions && bun run pglite:build-low-memory",
 		"pglite:build-low-memory": "bash scripts/build-pglite-low-memory.sh",
-		"pglite:verify-memory": "node scripts/verify-pglite-memory.mjs src/vendor/pglite/pglite.wasm 64"
+		"pglite:verify-memory": "bun scripts/verify-pglite-memory.mjs src/vendor/pglite/pglite.wasm 64"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.15.2",

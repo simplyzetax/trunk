@@ -9,6 +9,32 @@ PATCH_FILE="$ROOT_DIR/patches/postgres-pglite-initial-memory-${MEMORY_MB}mb.patc
 ARTIFACT_FILE="$ROOT_DIR/src/vendor/pglite/pglite.wasm"
 PATCH_APPLIED=0
 
+if ! command -v git >/dev/null 2>&1; then
+	printf 'Missing required tool: git\n' >&2
+	exit 1
+fi
+
+if ! command -v pnpm >/dev/null 2>&1; then
+	printf 'Missing required tool for upstream PGlite build: pnpm\n' >&2
+	printf 'Install pnpm, then rerun: bun run setup\n' >&2
+	exit 1
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+	printf 'Missing required tool: bun\n' >&2
+	exit 1
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+	printf 'Missing required tool for upstream PGlite build: docker\n' >&2
+	exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+	printf 'Docker is not running or is not reachable\n' >&2
+	exit 1
+fi
+
 cleanup() {
 	if [ "$PATCH_APPLIED" = "1" ]; then
 		git -C "$POSTGRES_PGLITE_DIR" apply --reverse "$PATCH_FILE"
@@ -41,9 +67,9 @@ else
 fi
 
 pnpm --dir "$PGLITE_DIR" wasm:build
-node "$ROOT_DIR/scripts/verify-pglite-memory.mjs" "$PGLITE_DIR/packages/pglite/release/pglite.wasm" "$MEMORY_MB"
+bun "$ROOT_DIR/scripts/verify-pglite-memory.mjs" "$PGLITE_DIR/packages/pglite/release/pglite.wasm" "$MEMORY_MB"
 mkdir -p "$(dirname "$ARTIFACT_FILE")"
 cp "$PGLITE_DIR/packages/pglite/release/pglite.wasm" "$ARTIFACT_FILE"
-node "$ROOT_DIR/scripts/verify-pglite-memory.mjs" "$ARTIFACT_FILE" "$MEMORY_MB"
+bun "$ROOT_DIR/scripts/verify-pglite-memory.mjs" "$ARTIFACT_FILE" "$MEMORY_MB"
 
 printf 'Built lower-memory PGlite artifact at %s\n' "$ARTIFACT_FILE"

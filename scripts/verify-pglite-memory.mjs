@@ -43,13 +43,17 @@ const createImports = (pages) => {
 	return importObject;
 };
 
+const isMemoryImportTooSmall = (message) =>
+	(message.includes('memory import has') && message.includes('smaller than the declared initial')) ||
+	(message.includes("provided a 'size' that is smaller than") && message.includes("module's declared 'initial' import memory size"));
+
 const canInstantiate = async (pages) => {
 	try {
 		await WebAssembly.instantiate(module, createImports(pages));
 		return true;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		if (message.includes('memory import has') && message.includes('smaller than the declared initial')) {
+		if (isMemoryImportTooSmall(message)) {
 			return false;
 		}
 

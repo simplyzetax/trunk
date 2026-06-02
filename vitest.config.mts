@@ -9,6 +9,7 @@ export default defineConfig({
 	],
 	test: {
 		include: ['test/**/*.test.ts'],
+		exclude: ['test/artifacts.test.ts'],
 		testTimeout: 60_000,
 	},
 });
