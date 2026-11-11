@@ -11,6 +11,10 @@
 		{
 			"new_sqlite_classes": ["PgliteDatabase"],
 			"tag": "v1"
+		},
+		{
+			"new_sqlite_classes": ["Registry"],
+			"tag": "v2"
 		}
 	],
 	"durable_objects": {
@@ -18,6 +22,10 @@
 			{
 				"class_name": "PgliteDatabase",
 				"name": "PGLITE_DATABASE"
+			},
+			{
+				"class_name": "Registry",
+				"name": "REGISTRY"
 			}
 		]
 	},

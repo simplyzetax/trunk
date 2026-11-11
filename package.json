@@ -6,10 +6,11 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
+		"trunk": "bun cli/trunk.ts",
 		"test": "bun run test:workers && bun run test:node",
 		"test:workers": "vitest run --config vitest.config.mts",
 		"test:node": "vitest run --config vitest.node.config.mts",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --noEmit && tsc --noEmit -p cli",
 		"check": "bun run artifacts:check && bun run typecheck && bun run test:workers && bun run test:node && wrangler deploy --dry-run",
 		"artifacts:check": "bun scripts/check-artifacts.mjs",
 		"cf-typegen": "wrangler types",
@@ -28,6 +29,11 @@
 	"dependencies": {
 		"@electric-sql/pglite": "^0.4.5",
 		"@electric-sql/pglite-prepopulatedfs": "0.0.3",
-		"hono": "^4.12.16"
+		"@modelcontextprotocol/server": "2.4.0",
+		"hono": "^4.12.16",
+		"zod": "4.6.7"
+	},
+	"bin": {
+		"trunk": "cli/trunk.ts"
 	}
 }

@@ -1,0 +1,2 @@
+# Admin token for `wrangler dev`. In production: bunx wrangler secret put TRUNK_ADMIN_TOKEN
+TRUNK_ADMIN_TOKEN=dev-admin-token

@@ -37,5 +37,5 @@
 		"skipLibCheck": true,
 		"types": ["./worker-configuration.d.ts", "@cloudflare/vitest-pool-workers/types"]
 	},
-	"exclude": ["vendor"]
+	"exclude": ["vendor", "cli"]
 }

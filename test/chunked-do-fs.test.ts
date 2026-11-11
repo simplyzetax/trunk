@@ -1,4 +1,4 @@
-import { env, exports } from 'cloudflare:workers';
+import { env } from 'cloudflare:workers';
 import { abortAllDurableObjects, runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 
@@ -19,97 +19,6 @@ const runWithFs = async (name: string, callback: (fs: ChunkedDurableObjectFS, st
 };
 
 describe('ChunkedDurableObjectFS in Durable Object storage', () => {
-	it('returns health status', async () => {
-		const response = await exports.default.fetch('https://example.com/health');
-
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ ok: true });
-	});
-
-	it('runs SQL through the HTTP query endpoint', async () => {
-		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ sql: 'select $1::text as value', params: ['hello'] }),
-		});
-
-		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ rows: [{ value: 'hello' }] });
-	});
-
-	it('rejects malformed JSON query bodies', async () => {
-		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: '{',
-		});
-
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
-	});
-
-	it('rejects null JSON query bodies', async () => {
-		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: 'null',
-		});
-
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({ error: 'Expected JSON object body' });
-	});
-
-	it('rejects query requests without SQL', async () => {
-		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ params: [] }),
-		});
-
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({ error: 'Expected JSON body with string field: sql' });
-	});
-
-	it('rejects query requests with non-array params', async () => {
-		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ sql: 'select 1', params: {} }),
-		});
-
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({ error: 'Expected params to be an array when provided' });
-	});
-
-	it('returns a small error body for invalid SQL', async () => {
-		const response = await exports.default.fetch(`https://example.com/query/${crypto.randomUUID()}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ sql: 'select * from missing_table' }),
-		});
-
-		const body = (await response.json()) as { error?: string; stack?: string };
-		expect(response.status).toBe(400);
-		expect(body.error).toContain('missing_table');
-		expect(body.stack).toBeUndefined();
-	});
-
-	it('returns invalid SQL as a non-throwing HTTP query result', async () => {
-		const stub = env.PGLITE_DATABASE.getByName(crypto.randomUUID());
-		const result = await stub.queryForHttp('select * from missing_table');
-
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toContain('missing_table');
-		}
-	});
-
-	it('runs PGlite queries through the Durable Object route', async () => {
-		const response = await exports.default.fetch('https://example.com/query/foo');
-		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ rows: [{ ok: 1 }] });
-	});
-
 	it('starts PGlite with constrained shared buffers', async () => {
 		const stub = env.PGLITE_DATABASE.getByName(crypto.randomUUID());
 		const result = (await stub.query("select setting::int as buffers from pg_settings where name = 'shared_buffers'")) as { rows: { buffers: number }[] };

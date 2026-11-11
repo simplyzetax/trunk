@@ -5,6 +5,7 @@ export default defineConfig({
 	plugins: [
 		cloudflareTest({
 			wrangler: { configPath: './wrangler.jsonc' },
+			miniflare: { bindings: { TRUNK_ADMIN_TOKEN: 'test-admin-token' } },
 		}),
 	],
 	test: {
